@@ -38,6 +38,10 @@ export function NewDB(URI: string, dbName: string) {
 			.createIndex({ project: 1 }, { unique: true })
 
 		await db.collection<RootDomain>(ROOT_DOMAINS_COL).createIndex({ project: 1 })
+
+		await db
+			.collection<Subdomain>(SUBDOMAINS_COL)
+			.createIndex({ project: 1, createdAt: 1 })
 	}
 
 	const getRootDomains = async (project: string) => {
@@ -77,20 +81,23 @@ export function NewDB(URI: string, dbName: string) {
 
 	const upsertNewSubdomains = async (
 		project: string,
-		domain: string,
-		subdomains: string[]
+		subdomains: { rootDomain: string; subdomain: string }[]
 	) => {
 		const subsColl = db.collection<Subdomain>(SUBDOMAINS_COL)
 		// FIXME can grow too large! should paginate
-		const ops: AnyBulkWriteOperation<Subdomain>[] = subdomains.map(subdomain => ({
-			updateOne: {
-				upsert: true,
-				filter: { project, subdomain },
-				update: {
-					$setOnInsert: { rootDomain: domain, subdomain, project, createdAt: new Date() },
-				},
-			},
-		}))
+		const ops: AnyBulkWriteOperation<Subdomain>[] = subdomains.map(
+			({ rootDomain, subdomain }) => {
+				return {
+					updateOne: {
+						upsert: true,
+						filter: { project, subdomain },
+						update: {
+							$setOnInsert: { rootDomain, subdomain, project, createdAt: new Date() },
+						},
+					},
+				}
+			}
+		)
 
 		const result = await subsColl.bulkWrite(ops)
 		if (result.hasWriteErrors()) {

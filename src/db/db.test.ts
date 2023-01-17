@@ -133,6 +133,77 @@ test.serial('getRootDomains should not fail with no rootDomains', async t => {
 	t.is(dbRootDomains.length, 0)
 })
 
+test.serial('upsertNewSubdomains should not fail', async t => {
+	const db = NewDB(DB_URI, DB_NAME)
+	await db.initialize()
+	await db.DEBUG_cleanDB()
+
+	const projectName = 'memoryleaks'
+	await db.createProject(projectName)
+
+	const rootDomain = 'memoryleaks.ir'
+	await db.upsertNewRootDomains(projectName, [rootDomain])
+
+	const subdomains = ['wp.memoryleaks.ir', 'app1.memoryleaks.ir']
+	await t.notThrowsAsync(
+		db.upsertNewSubdomains(
+			projectName,
+			subdomains.map(subdomain => ({ rootDomain, subdomain }))
+		)
+	)
+})
+
+test.serial('getSubdomains should not fail', async t => {
+	const db = NewDB(DB_URI, DB_NAME)
+	await db.initialize()
+	await db.DEBUG_cleanDB()
+
+	const projectName = 'memoryleaks'
+	await db.createProject(projectName)
+
+	const rootDomain = 'memoryleaks.ir'
+	await db.upsertNewRootDomains(projectName, [rootDomain])
+
+	const subdomains = ['wp.memoryleaks.ir', 'app1.memoryleaks.ir']
+	await db.upsertNewSubdomains(
+		projectName,
+		subdomains.map(subdomain => ({ rootDomain, subdomain }))
+	)
+
+	const dbSubdomains = await db.getSubdomains(projectName)
+
+	dbSubdomains.forEach(item => t.is(item.rootDomain, rootDomain))
+	t.notThrows(() =>
+		arrsAreEqual(
+			subdomains,
+			dbSubdomains.map(item => item.subdomain)
+		)
+	)
+})
+
+test.serial('getSubdomains after date should be applied', async t => {
+	const db = NewDB(DB_URI, DB_NAME)
+	await db.initialize()
+	await db.DEBUG_cleanDB()
+
+	const projectName = 'memoryleaks'
+	await db.createProject(projectName)
+
+	const rootDomain = 'memoryleaks.ir'
+	await db.upsertNewRootDomains(projectName, [rootDomain])
+
+	const subdomains = ['wp.memoryleaks.ir', 'app1.memoryleaks.ir']
+	await db.upsertNewSubdomains(
+		projectName,
+		subdomains.map(subdomain => ({ rootDomain, subdomain }))
+	)
+
+	const after = new Date()
+	after.setDate(after.getDate() + 2)
+	const dbSubdomains = await db.getSubdomains(projectName, after)
+	t.is(dbSubdomains.length, 0)
+})
+
 function arrsAreEqual(arr1: string[], arr2: string[]): void {
 	if (arr1.length !== arr2.length)
 		throw new Error(
