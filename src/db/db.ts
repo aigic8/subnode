@@ -21,6 +21,10 @@ export interface RootDomain {
 
 export type DB = ReturnType<typeof NewDB>
 
+const ROOT_DOMAINS_COL = 'rootDomains'
+const SUBDOMAINS_COL = 'subdomains'
+const PROJECTS_COL = 'projects'
+
 export function NewDB(URI: string, dbName: string) {
 	const client = new MongoClient(URI)
 	const db = client.db(dbName)
@@ -28,15 +32,21 @@ export function NewDB(URI: string, dbName: string) {
 	// FIXME maybe use a class?
 	// FIXME doesnt send back _id when using get methods
 
+	const initialize = async () => {
+		await db
+			.collection<Project>(PROJECTS_COL)
+			.createIndex({ project: 1 }, { unique: true })
+	}
+
 	const getRootDomains = async (project: string) => {
-		const cursor = db.collection<RootDomain>('rootDomains').find({
+		const cursor = db.collection<RootDomain>(ROOT_DOMAINS_COL).find({
 			project,
 		})
 		return cursor.toArray()
 	}
 
 	const upsertNewRootDomains = async (project: string, rootDomains: string[]) => {
-		const domainsColl = db.collection<RootDomain>('rootDomains')
+		const domainsColl = db.collection<RootDomain>(ROOT_DOMAINS_COL)
 		// FIXME can grow too large! should paginate
 		const ops: AnyBulkWriteOperation<RootDomain>[] = rootDomains.map(rootDomain => ({
 			updateOne: {
@@ -59,7 +69,7 @@ export function NewDB(URI: string, dbName: string) {
 		let filter: Filter<Subdomain> = { project }
 		if (after) filter = { ...filter, createdAt: { $gte: after } }
 		// TODO paginate subdomains, they can be a lot of them
-		const cursor = db.collection<Subdomain>('subdomains').find(filter)
+		const cursor = db.collection<Subdomain>(SUBDOMAINS_COL).find(filter)
 		return cursor.toArray()
 	}
 
@@ -68,7 +78,7 @@ export function NewDB(URI: string, dbName: string) {
 		domain: string,
 		subdomains: string[]
 	) => {
-		const subsColl = db.collection<Subdomain>('subdomains')
+		const subsColl = db.collection<Subdomain>(SUBDOMAINS_COL)
 		// FIXME can grow too large! should paginate
 		const ops: AnyBulkWriteOperation<Subdomain>[] = subdomains.map(subdomain => ({
 			updateOne: {
@@ -89,19 +99,32 @@ export function NewDB(URI: string, dbName: string) {
 
 	const createProject = async (project: string) => {
 		await db
-			.collection<Project>('projects')
+			.collection<Project>(PROJECTS_COL)
 			.insertOne({ project, createdAt: new Date(), lastDnsProbed: new Date() })
 	}
 
 	const getProject = (project: string) => {
-		return db.collection<Project>('projects').findOne({ project })
+		return db.collection<Project>(PROJECTS_COL).findOne({ project })
 	}
 
 	const setProjectLastDnsProbed = async (project: string, lastDnsProbed: Date) => {
-		db.collection<Project>('projects').updateOne({ project }, { lastDnsProbed })
+		const result = await db
+			.collection<Project>(PROJECTS_COL)
+			.updateOne({ project }, { $set: { lastDnsProbed } })
+		if (result.modifiedCount === 0) throw new Error('project not found')
+	}
+
+	const DEBUG_cleanDB = () => {
+		return Promise.all([
+			db.collection(PROJECTS_COL).deleteMany({}),
+			db.collection(SUBDOMAINS_COL).deleteMany({}),
+			db.collection(ROOT_DOMAINS_COL).deleteMany({}),
+		])
 	}
 
 	return {
+		initialize,
+
 		getProject,
 		createProject,
 		setProjectLastDnsProbed,
@@ -111,5 +134,7 @@ export function NewDB(URI: string, dbName: string) {
 
 		getSubdomains,
 		upsertNewSubdomains,
+
+		DEBUG_cleanDB,
 	}
 }
