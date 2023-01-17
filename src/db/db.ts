@@ -36,6 +36,8 @@ export function NewDB(URI: string, dbName: string) {
 		await db
 			.collection<Project>(PROJECTS_COL)
 			.createIndex({ project: 1 }, { unique: true })
+
+		await db.collection<RootDomain>(ROOT_DOMAINS_COL).createIndex({ project: 1 })
 	}
 
 	const getRootDomains = async (project: string) => {
