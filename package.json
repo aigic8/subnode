@@ -11,7 +11,8 @@
 		"nodeArguments": [
 			"--loader=ts-node/esm",
       "--experimental-specifier-resolution=node"
-		]
+		],
+    "concurrency": 1
 	},
   "scripts": {
     "dev": "ts-node src/main.ts",

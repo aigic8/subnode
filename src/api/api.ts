@@ -1,13 +1,13 @@
-import Fastify from 'fastify'
+import Fastify, { InjectOptions } from 'fastify'
 import { DB, Project, RootDomain, Subdomain } from '../db/db'
 import status from 'http-status'
 
-type APIReply<T> = { ok: true; data: T } | { ok: false; error: string }
+export type APIReply<T> = { ok: true; data: T } | { ok: false; error: string }
+export type ServerApp = ReturnType<typeof App>
 
 interface ServerOptions {
-	host: string
-	port: number
 	db: DB
+	logger?: boolean
 }
 
 type GetProjectShape = {
@@ -16,7 +16,7 @@ type GetProjectShape = {
 }
 
 type PutNewProjectShape = {
-	Body: { name: string }
+	Body: { project: string }
 	Reply: APIReply<{}>
 }
 
@@ -38,13 +38,13 @@ type PutNewRootDomainsShape = {
 
 const makeErr = (error: string) => ({ ok: false, error } as { ok: false; error: string })
 
-export function runServer({ port, host, db }: ServerOptions) {
-	const app = Fastify({ logger: true })
+export function App({ db, logger = true }: ServerOptions) {
+	const app = Fastify({ logger })
 
 	// FIXME add versioning and api prefix
 	// FIXME each part in a seperate file
 
-	app.get<GetProjectShape>('projects/:project', async (req, reply) => {
+	app.get<GetProjectShape>('/projects/:project', async (req, reply) => {
 		const { project: name } = req.params
 		// FIXME custom type for errors
 		if (!name || name === '')
@@ -65,13 +65,13 @@ export function runServer({ port, host, db }: ServerOptions) {
 		}
 	})
 
-	app.put<PutNewProjectShape>('projects/new', async (req, reply) => {
-		const { name } = req.body
-		if (!name || name === '')
+	app.put<PutNewProjectShape>('/projects/new', async (req, reply) => {
+		const { project } = req.body
+		if (!project || project === '')
 			return reply.code(status.BAD_REQUEST).send(makeErr('project name is empty'))
 
 		try {
-			await db.createProject(name)
+			await db.createProject(project)
 			return reply.send({ ok: true, data: {} })
 		} catch (e) {
 			console.error('ERROR', e)
@@ -83,7 +83,7 @@ export function runServer({ port, host, db }: ServerOptions) {
 
 	// app.delete("projects")
 
-	app.get<GetSubdomainsShape>('subdomains/:project', async (req, reply) => {
+	app.get<GetSubdomainsShape>('/subdomains/:project', async (req, reply) => {
 		const { project } = req.params
 		const { after } = req.query
 
@@ -114,7 +114,7 @@ export function runServer({ port, host, db }: ServerOptions) {
 		}
 	})
 
-	app.get<GetRootDomainsShape>('root_domains/:project', async (req, reply) => {
+	app.get<GetRootDomainsShape>('/root_domains/:project', async (req, reply) => {
 		const { project } = req.params
 
 		if (!project || project === '')
@@ -134,7 +134,7 @@ export function runServer({ port, host, db }: ServerOptions) {
 		}
 	})
 
-	app.put<PutNewRootDomainsShape>('root_domains/new', async (req, reply) => {
+	app.put<PutNewRootDomainsShape>('/root_domains/new', async (req, reply) => {
 		const { project, rootDomains } = req.body
 
 		if (!project || project === '')
@@ -149,6 +149,7 @@ export function runServer({ port, host, db }: ServerOptions) {
 				return reply.code(status.NOT_FOUND).send(makeErr('project not found'))
 
 			await db.upsertNewRootDomains(project, rootDomains)
+			return reply.send({ ok: true, data: {} })
 		} catch (e) {
 			console.error(e)
 			return reply
@@ -161,5 +162,9 @@ export function runServer({ port, host, db }: ServerOptions) {
 	// app.post("actions/dns_probe")
 	// app.post("actions/http_probe")
 
-	app.listen({ port, host })
+	const listen = ({ port, host }: { port: number; host: string }) =>
+		app.listen({ port, host })
+	const DEBUG_inject = (o: InjectOptions | string) => app.inject(o)
+
+	return { listen, DEBUG_inject }
 }
