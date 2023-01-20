@@ -10,7 +10,7 @@ type GetProjectShape = {
 
 type PutNewProjectShape = {
 	Body: { project: string }
-	Reply: APIReply<{}>
+	Reply: APIReply<Record<string, never>>
 }
 
 export default function ProjectController(db: DB): FastifyPluginCallback {
@@ -26,7 +26,7 @@ export default function ProjectController(db: DB): FastifyPluginCallback {
 				if (!project)
 					return reply.code(status.NOT_FOUND).send(makeAPIErr('project not found'))
 
-				const { _id, ...resProject } = project
+				const { _id, ...resProject } = project // eslint-disable-line
 				return reply.send({ ok: true, data: { project: resProject } })
 			} catch (e) {
 				// FIXME better error handling

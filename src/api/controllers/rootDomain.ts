@@ -10,7 +10,7 @@ type GetRootDomainsShape = {
 
 type PutNewRootDomainsShape = {
 	Body: { project: string; rootDomains: string[] }
-	Reply: APIReply<{}>
+	Reply: APIReply<Record<string, never>>
 }
 
 export default function RootDomainController(db: DB): FastifyPluginCallback {
