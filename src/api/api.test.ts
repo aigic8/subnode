@@ -1,8 +1,9 @@
 import test, { ExecutionContext } from 'ava'
 import { NewDB, Project, RootDomain, Subdomain } from '../db/db'
-import { APIReply, App, ServerApp } from './api'
+import { App, ServerApp } from './api'
 import status from 'http-status'
 import { Response } from 'light-my-request'
+import { APIReply } from './utils'
 
 const DB_URI = 'mongodb://127.0.0.1:2727/'
 const DB_NAME = 'subnode_test'
@@ -236,27 +237,27 @@ function Inject(app: ServerApp) {
 	const getProject = (project = '') =>
 		app.DEBUG_inject({
 			method: 'GET',
-			url: `/projects/${project}`,
+			url: `/api/projects/${project}`,
 		})
 
 	const putNewProject = (project?: string) =>
 		app.DEBUG_inject({
 			method: 'PUT',
-			url: '/projects/new',
+			url: '/api/projects/new',
 			payload: project ? { project } : {},
 		})
 
 	const getSubdomains = (project = '', after?: Date) =>
 		app.DEBUG_inject({
 			method: 'GET',
-			url: `/subdomains/${project}`,
+			url: `/api/subdomains/${project}`,
 			query: after ? { after: after.toString() } : {},
 		})
 
 	const getRootDomains = (project = '') =>
 		app.DEBUG_inject({
 			method: 'GET',
-			url: `/root_domains/${project}`,
+			url: `/api/root_domains/${project}`,
 		})
 
 	const putNewRootDomains = (project?: string, rootDomains?: string[]) => {
@@ -266,7 +267,7 @@ function Inject(app: ServerApp) {
 
 		return app.DEBUG_inject({
 			method: 'PUT',
-			url: '/root_domains/new',
+			url: '/api/root_domains/new',
 			payload,
 		})
 	}
