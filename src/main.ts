@@ -17,11 +17,10 @@ async function main() {
 	subsEvents.on('error', err => console.error('ERROR', err))
 
 	const db = NewDB('', '') // FIXME
-	// FIXME bad api, should extract root domain of each subdomain then send it with object
+	const rootDomain = 'memoryleaks.ir'
 	const subsUpsertErrs = await db.upsertNewSubdomains(
 		'memoryleaks',
-		'memoryleaks.ir',
-		Object.keys(subs)
+		Object.keys(subs).map(subdomain => ({ rootDomain, subdomain }))
 	)
 	if (subsUpsertErrs) subsUpsertErrs.forEach(err => console.log(err.errmsg))
 }
