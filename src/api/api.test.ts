@@ -34,10 +34,10 @@ test.serial('get project: should not fail', async t => {
 	t.is(data.project.project, projectName)
 })
 
-test.serial('get project: should respond BAD_REQUEST without project param', async t => {
+test.serial('get project: should respond NOT_FOUND without project param', async t => {
 	const { inject } = await initializeTest()
 	const resp = await inject.getProject()
-	isAPIError(t, resp, status.BAD_REQUEST)
+	isAPIError(t, resp, status.NOT_FOUND)
 })
 
 test.serial(

@@ -1,11 +1,37 @@
-import { FastifyPluginCallback } from 'fastify'
+import { FastifyPluginCallback, RouteShorthandOptions } from 'fastify'
 import { DB, Project } from '../../db/db'
-import { APIReply, makeAPIErr } from '../utils'
+import { APIReply, INTERNAL_SERVER_MSG, makeAPIErr } from '../utils'
 import status from 'http-status'
+
+const getProjectOptions: RouteShorthandOptions = {
+	schema: {
+		params: {
+			type: 'object',
+			properties: {
+				project: { type: 'string' },
+			},
+			required: ['project'],
+			additionalProperties: false,
+		},
+	},
+}
 
 type GetProjectShape = {
 	Params: { project: string }
 	Reply: APIReply<{ project: Project }>
+}
+
+const putNewProjectOptions: RouteShorthandOptions = {
+	schema: {
+		body: {
+			type: 'object',
+			properties: {
+				project: { type: 'string' },
+			},
+			required: ['project'],
+			additionalProperties: false,
+		},
+	},
 }
 
 type PutNewProjectShape = {
@@ -15,12 +41,8 @@ type PutNewProjectShape = {
 
 export default function ProjectController(db: DB): FastifyPluginCallback {
 	return (app, _, done) => {
-		app.get<GetProjectShape>('/:project', async (req, reply) => {
+		app.get<GetProjectShape>('/:project', getProjectOptions, async (req, reply) => {
 			const { project: name } = req.params
-			// FIXME custom type for errors
-			if (!name || name === '')
-				return reply.code(status.BAD_REQUEST).send(makeAPIErr('project is empty'))
-
 			try {
 				const project = await db.getProject(name)
 				if (!project)
@@ -31,17 +53,12 @@ export default function ProjectController(db: DB): FastifyPluginCallback {
 			} catch (e) {
 				// FIXME better error handling
 				console.error('ERROR', e)
-				reply
-					.code(status.INTERNAL_SERVER_ERROR)
-					.send(makeAPIErr('internal server error happened!'))
+				reply.code(status.INTERNAL_SERVER_ERROR).send(makeAPIErr(INTERNAL_SERVER_MSG))
 			}
 		})
 
-		app.put<PutNewProjectShape>('/new', async (req, reply) => {
+		app.put<PutNewProjectShape>('/new', putNewProjectOptions, async (req, reply) => {
 			const { project } = req.body
-			if (!project || project === '')
-				return reply.code(status.BAD_REQUEST).send(makeAPIErr('project name is empty'))
-
 			try {
 				await db.createProject(project)
 				return reply.send({ ok: true, data: {} })
@@ -49,7 +66,7 @@ export default function ProjectController(db: DB): FastifyPluginCallback {
 				console.error('ERROR', e)
 				return reply
 					.code(status.INTERNAL_SERVER_ERROR)
-					.send(makeAPIErr('internal server error happened!'))
+					.send(makeAPIErr(INTERNAL_SERVER_MSG))
 			}
 		})
 
