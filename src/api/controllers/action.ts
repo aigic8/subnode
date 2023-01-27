@@ -8,6 +8,16 @@ interface CheckNewSubsShape {
 	Reply: APIReply<Record<string, never>>
 }
 
+interface DnsProbeShape {
+	Body: { project: string }
+	Reply: APIReply<Record<string, never>>
+}
+
+interface HttpProbeShape {
+	Body: { project: string }
+	Reply: APIReply<Record<string, never>>
+}
+
 export default function ActionController(db: DB): FastifyPluginCallback {
 	// FIXME check if we are not already doing the operation asked (better to be in DB, for multithreading)
 	// TODO find a safe way to test action controller
@@ -36,8 +46,47 @@ export default function ActionController(db: DB): FastifyPluginCallback {
 			return reply.send({ ok: true, data: {} })
 		})
 
-		// app.post("/dns_probe")
-		// app.post("/http_probe")
+		app.post<DnsProbeShape>('/dns_probe', async (req, reply) => {
+			const { project: projectName } = req.body
+			if (!projectName || projectName === '')
+				return reply.code(status.BAD_REQUEST).send(makeAPIErr('project is empty'))
+
+			const project = await db.getProject(projectName)
+			if (!project)
+				return reply.code(status.NOT_FOUND).send(makeAPIErr('project does not exist'))
+
+				// we DO NOT await this intensionally, we don't want the API user to wait for this
+			;(async () => {
+				try {
+					await notifyNewSubdomainsWithIP(projectName)
+				} catch (e) {
+					console.error(e) // FIXME logging
+				}
+			})()
+
+			return reply.send({ ok: true, data: {} })
+		})
+
+		app.post<HttpProbeShape>('/http_probe', async (req, reply) => {
+			const { project: projectName } = req.body
+			if (!projectName || projectName === '')
+				return reply.code(status.BAD_REQUEST).send(makeAPIErr('project is empty'))
+
+			const project = await db.getProject(projectName)
+			if (!project)
+				return reply.code(status.NOT_FOUND).send(makeAPIErr('project does not exist'))
+
+				// we DO NOT await this intensionally, we don't want the API user to wait for this
+			;(async () => {
+				try {
+					await notifyNewSubdomainsWithHTTP(projectName)
+				} catch (e) {
+					console.error(e) // FIXME logging
+				}
+			})()
+
+			return reply.send({ ok: true, data: {} })
+		})
 
 		/**  Fetch new subdomains and notify user about them.
 		 * If optional parameter `rootDomains` is not provided it will be fetched from db */
