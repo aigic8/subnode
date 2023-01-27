@@ -1,16 +1,55 @@
-import { FastifyPluginCallback } from 'fastify'
+import { FastifyPluginCallback, RouteShorthandOptions } from 'fastify'
 import { DB } from '../../db/db'
 import { APIReply, dnsProbe, enumSubs, httpProbe, makeAPIErr } from '../utils'
 import status from 'http-status'
+
+const checkNewSubsOptions: RouteShorthandOptions = {
+	schema: {
+		body: {
+			type: 'object',
+			properties: {
+				project: { type: 'string' },
+			},
+			required: ['project'],
+			additionalProperties: false,
+		},
+	},
+}
 
 interface CheckNewSubsShape {
 	Body: { project: string }
 	Reply: APIReply<Record<string, never>>
 }
 
+const dnsProbeOptions: RouteShorthandOptions = {
+	schema: {
+		body: {
+			type: 'object',
+			properties: {
+				project: { type: 'string' },
+			},
+			required: ['project'],
+			additionalProperties: false,
+		},
+	},
+}
+
 interface DnsProbeShape {
 	Body: { project: string }
 	Reply: APIReply<Record<string, never>>
+}
+
+const httpProbeOptions: RouteShorthandOptions = {
+	schema: {
+		body: {
+			type: 'object',
+			properties: {
+				project: { type: 'string' },
+			},
+			required: ['project'],
+			additionalProperties: false,
+		},
+	},
 }
 
 interface HttpProbeShape {
@@ -22,7 +61,35 @@ export default function ActionController(db: DB): FastifyPluginCallback {
 	// FIXME check if we are not already doing the operation asked (better to be in DB, for multithreading)
 	// TODO find a safe way to test action controller
 	return (app, _, done) => {
-		app.post<CheckNewSubsShape>('/check_new_subs', async (req, reply) => {
+		app.post<CheckNewSubsShape>(
+			'/check_new_subs',
+			checkNewSubsOptions,
+			async (req, reply) => {
+				const { project: projectName } = req.body
+				if (!projectName || projectName === '')
+					return reply.code(status.BAD_REQUEST).send(makeAPIErr('project is empty'))
+
+				const project = await db.getProject(projectName)
+				if (!project)
+					return reply.code(status.NOT_FOUND).send(makeAPIErr('project does not exist'))
+
+					// we DO NOT await this intensionally, we don't want the API user to wait for this
+				;(async () => {
+					// FIXME api to pass only new subs to next stages
+					try {
+						await notifyNewSubdomains(projectName)
+						await notifyNewSubdomainsWithIP(projectName)
+						await notifyNewSubdomainsWithHTTP(projectName)
+					} catch (e) {
+						console.error(e) // FIXME logging
+					}
+				})()
+
+				return reply.send({ ok: true, data: {} })
+			}
+		)
+
+		app.post<DnsProbeShape>('/dns_probe', dnsProbeOptions, async (req, reply) => {
 			const { project: projectName } = req.body
 			if (!projectName || projectName === '')
 				return reply.code(status.BAD_REQUEST).send(makeAPIErr('project is empty'))
@@ -33,30 +100,6 @@ export default function ActionController(db: DB): FastifyPluginCallback {
 
 				// we DO NOT await this intensionally, we don't want the API user to wait for this
 			;(async () => {
-				// FIXME api to pass only new subs to next stages
-				try {
-					await notifyNewSubdomains(projectName)
-					await notifyNewSubdomainsWithIP(projectName)
-					await notifyNewSubdomainsWithHTTP(projectName)
-				} catch (e) {
-					console.error(e) // FIXME logging
-				}
-			})()
-
-			return reply.send({ ok: true, data: {} })
-		})
-
-		app.post<DnsProbeShape>('/dns_probe', async (req, reply) => {
-			const { project: projectName } = req.body
-			if (!projectName || projectName === '')
-				return reply.code(status.BAD_REQUEST).send(makeAPIErr('project is empty'))
-
-			const project = await db.getProject(projectName)
-			if (!project)
-				return reply.code(status.NOT_FOUND).send(makeAPIErr('project does not exist'))
-
-				// we DO NOT await this intensionally, we don't want the API user to wait for this
-			;(async () => {
 				try {
 					await notifyNewSubdomainsWithIP(projectName)
 				} catch (e) {
@@ -67,7 +110,7 @@ export default function ActionController(db: DB): FastifyPluginCallback {
 			return reply.send({ ok: true, data: {} })
 		})
 
-		app.post<HttpProbeShape>('/http_probe', async (req, reply) => {
+		app.post<HttpProbeShape>('/http_probe', httpProbeOptions, async (req, reply) => {
 			const { project: projectName } = req.body
 			if (!projectName || projectName === '')
 				return reply.code(status.BAD_REQUEST).send(makeAPIErr('project is empty'))
