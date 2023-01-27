@@ -75,11 +75,11 @@ test.serial('get subdomains: should not fail', async t => {
 })
 
 test.serial(
-	'get subdomains: should respond BAD_REQUEST without project in body',
+	'get subdomains: should respond NOT_FOUND without project in body',
 	async t => {
 		const { inject } = await initializeTest()
 		const resp = await inject.getSubdomains()
-		isAPIError(t, resp, status.BAD_REQUEST)
+		isAPIError(t, resp, status.NOT_FOUND)
 	}
 )
 
@@ -102,7 +102,7 @@ test.serial('get subodmains: after query should be used', async t => {
 		{ rootDomain: rootDomain, subdomain: 'cdn.memoryleaks.ir' },
 	]
 	const after = new Date()
-	after.setDate(after.getDate() + 2)
+	after.setDate(after.getDate() + 1)
 
 	await inject.putNewProject(projectName)
 	// FIXME use api instead of db
@@ -251,7 +251,7 @@ function Inject(app: ServerApp) {
 		app.DEBUG_inject({
 			method: 'GET',
 			url: `/api/subdomains/${project}`,
-			query: after ? { after: after.toString() } : {},
+			query: after ? { after: after.toISOString() } : {},
 		})
 
 	const getRootDomains = (project = '') =>

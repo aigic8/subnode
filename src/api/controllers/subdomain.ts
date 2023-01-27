@@ -1,7 +1,27 @@
-import { FastifyPluginCallback } from 'fastify'
+import { FastifyPluginCallback, RouteShorthandOptions } from 'fastify'
 import { DB, Subdomain } from '../../db/db'
 import status from 'http-status'
-import { APIReply, makeAPIErr } from '../utils'
+import { APIReply, INTERNAL_SERVER_MSG, makeAPIErr } from '../utils'
+
+const getSubdomainsOptions: RouteShorthandOptions = {
+	schema: {
+		params: {
+			type: 'object',
+			properties: {
+				project: { type: 'string' },
+			},
+			required: ['project'],
+			additionalProperties: false,
+		},
+		querystring: {
+			type: 'object',
+			properties: {
+				after: { type: 'string', format: 'date-time' },
+				removeAdditional: true,
+			},
+		},
+	},
+}
 
 type GetSubdomainsShape = {
 	Params: { project: string }
@@ -11,12 +31,9 @@ type GetSubdomainsShape = {
 
 export default function SubdomainController(db: DB): FastifyPluginCallback {
 	return (app, _, done) => {
-		app.get<GetSubdomainsShape>('/:project', async (req, reply) => {
+		app.get<GetSubdomainsShape>('/:project', getSubdomainsOptions, async (req, reply) => {
 			const { project } = req.params
 			const { after } = req.query
-
-			if (!project || project === '')
-				return reply.code(status.BAD_REQUEST).send(makeAPIErr('project is empty'))
 
 			try {
 				const dbProject = await db.getProject(project)
@@ -26,10 +43,9 @@ export default function SubdomainController(db: DB): FastifyPluginCallback {
 				console.error(e)
 				return reply
 					.code(status.INTERNAL_SERVER_ERROR)
-					.send(makeAPIErr('internal server error happened!'))
+					.send(makeAPIErr(INTERNAL_SERVER_MSG))
 			}
 
-			// FIXME validation the after string is a date
 			const afterDate = after ? new Date(after) : undefined
 			try {
 				const subdomains = await db.getSubdomains(project, afterDate)
@@ -38,7 +54,7 @@ export default function SubdomainController(db: DB): FastifyPluginCallback {
 				console.error(e)
 				return reply
 					.code(status.INTERNAL_SERVER_ERROR)
-					.send(makeAPIErr('internal server error happened!'))
+					.send(makeAPIErr(INTERNAL_SERVER_MSG))
 			}
 		})
 
