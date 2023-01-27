@@ -24,6 +24,14 @@ export function App({ db, logger = true }: ServerOptions) {
 			.code(code)
 			.send({ ok: false, error: isInternal ? INTERNAL_SERVER_MSG : err.message })
 	})
+
+	app.addHook('onRequest', (req, reply, done) => {
+		const contentType = req.headers['content-type']?.split(';')[0].trim()
+		if (contentType !== 'application/json')
+			reply.code(status.BAD_REQUEST).send({ ok: false, error: 'bad request' })
+		done()
+	})
+
 	app.register(ProjectController(db), { prefix: '/api/projects' })
 	app.register(SubdomainController(db), { prefix: '/api/subdomains' })
 	app.register(RootDomainController(db), { prefix: '/api/root_domains' })

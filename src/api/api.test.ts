@@ -231,10 +231,12 @@ function isOK(t: ExecutionContext, resp: Response) {
 }
 
 function Inject(app: ServerApp) {
+	const headers = { 'content-type': 'application/json' }
 	const getProject = (project = '') =>
 		app.DEBUG_inject({
 			method: 'GET',
 			url: `/api/projects/${project}`,
+			headers,
 		})
 
 	const putNewProject = (project?: string) =>
@@ -242,6 +244,7 @@ function Inject(app: ServerApp) {
 			method: 'PUT',
 			url: '/api/projects/new',
 			payload: project ? { project } : {},
+			headers,
 		})
 
 	const getSubdomains = (project = '', after?: Date) =>
@@ -249,12 +252,14 @@ function Inject(app: ServerApp) {
 			method: 'GET',
 			url: `/api/subdomains/${project}`,
 			query: after ? { after: after.toISOString() } : {},
+			headers,
 		})
 
 	const getRootDomains = (project = '') =>
 		app.DEBUG_inject({
 			method: 'GET',
 			url: `/api/root_domains/${project}`,
+			headers,
 		})
 
 	const putNewRootDomains = (project?: string, rootDomains?: string[]) => {
@@ -266,6 +271,7 @@ function Inject(app: ServerApp) {
 			method: 'PUT',
 			url: '/api/root_domains/new',
 			payload,
+			headers,
 		})
 	}
 
