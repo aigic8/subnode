@@ -181,19 +181,16 @@ test.serial(
 	}
 )
 
-test.serial(
-	'get root domains: should respond BAD_REQUEST if project is empty',
-	async t => {
-		const { inject } = await initializeTest()
-		const projectName = 'memoryleaks'
-		const rootDomains = ['memoryleaks.ir', 'memoryleaks2.ir']
+test.serial('get root domains: should respond NOT_FOUND if project is empty', async t => {
+	const { inject } = await initializeTest()
+	const projectName = 'memoryleaks'
+	const rootDomains = ['memoryleaks.ir', 'memoryleaks2.ir']
 
-		await inject.putNewProject(projectName)
-		await inject.putNewRootDomains(projectName, rootDomains)
-		const resp = await inject.getRootDomains()
-		isAPIError(t, resp, status.BAD_REQUEST)
-	}
-)
+	await inject.putNewProject(projectName)
+	await inject.putNewRootDomains(projectName, rootDomains)
+	const resp = await inject.getRootDomains()
+	isAPIError(t, resp, status.NOT_FOUND)
+})
 
 async function initializeTest(logger = false) {
 	const db = NewDB(DB_URI, DB_NAME)
