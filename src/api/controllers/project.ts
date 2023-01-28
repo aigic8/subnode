@@ -50,9 +50,7 @@ export default function ProjectController(db: DB): FastifyPluginCallback {
 
 				const { _id, ...resProject } = project // eslint-disable-line
 				return reply.send({ ok: true, data: { project: resProject } })
-			} catch (e) {
-				// FIXME better error handling
-				console.error('ERROR', e)
+			} catch (e: any) {
 				reply.code(status.INTERNAL_SERVER_ERROR).send(makeAPIErr(INTERNAL_SERVER_MSG))
 			}
 		})
@@ -62,8 +60,8 @@ export default function ProjectController(db: DB): FastifyPluginCallback {
 			try {
 				await db.createProject(project)
 				return reply.send({ ok: true, data: {} })
-			} catch (e) {
-				console.error('ERROR', e)
+			} catch (e: any) {
+				app.log.error(`error putting new project: ${e.message}`)
 				return reply
 					.code(status.INTERNAL_SERVER_ERROR)
 					.send(makeAPIErr(INTERNAL_SERVER_MSG))

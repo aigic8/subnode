@@ -39,8 +39,8 @@ export default function SubdomainController(db: DB): FastifyPluginCallback {
 				const dbProject = await db.getProject(project)
 				if (!dbProject)
 					return reply.code(status.NOT_FOUND).send(makeAPIErr('project not found'))
-			} catch (e) {
-				console.error(e)
+			} catch (e: any) {
+				app.log.error(`error getting project: ${e.message}`)
 				return reply
 					.code(status.INTERNAL_SERVER_ERROR)
 					.send(makeAPIErr(INTERNAL_SERVER_MSG))
@@ -50,8 +50,8 @@ export default function SubdomainController(db: DB): FastifyPluginCallback {
 			try {
 				const subdomains = await db.getSubdomains(project, afterDate)
 				return reply.send({ ok: true, data: { subdomains } })
-			} catch (e) {
-				console.error(e)
+			} catch (e: any) {
+				app.log.error(`error getting subdomain: ${e.message}`)
 				return reply
 					.code(status.INTERNAL_SERVER_ERROR)
 					.send(makeAPIErr(INTERNAL_SERVER_MSG))

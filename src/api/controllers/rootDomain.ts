@@ -53,8 +53,8 @@ export default function RootDomainController(db: DB): FastifyPluginCallback {
 						return reply.code(status.NOT_FOUND).send(makeAPIErr('project not found'))
 					const rootDomains = await db.getRootDomains(project)
 					return reply.send({ ok: true, data: { rootDomains } })
-				} catch (e) {
-					console.error(e)
+				} catch (e: any) {
+					app.log.error(`error getting root domain: ${e.message}`)
 					return reply
 						.code(status.INTERNAL_SERVER_ERROR)
 						.send(makeAPIErr(INTERNAL_SERVER_MSG))
@@ -75,8 +75,8 @@ export default function RootDomainController(db: DB): FastifyPluginCallback {
 
 					await db.upsertNewRootDomains(project, rootDomains)
 					return reply.send({ ok: true, data: {} })
-				} catch (e) {
-					console.error(e)
+				} catch (e: any) {
+					app.log.error(`error putting new root domain: ${e.message}`)
 					return reply
 						.code(status.INTERNAL_SERVER_ERROR)
 						.send(makeAPIErr(INTERNAL_SERVER_MSG))

@@ -80,8 +80,8 @@ export default function ActionController(db: DB): FastifyPluginCallback {
 						await notifyNewSubdomains(projectName)
 						await notifyNewSubdomainsWithIP(projectName)
 						await notifyNewSubdomainsWithHTTP(projectName)
-					} catch (e) {
-						console.error(e) // FIXME logging
+					} catch (e: any) {
+						app.log.error(`error notifiying user: ${e.message}`)
 					}
 				})()
 
@@ -102,8 +102,8 @@ export default function ActionController(db: DB): FastifyPluginCallback {
 			;(async () => {
 				try {
 					await notifyNewSubdomainsWithIP(projectName)
-				} catch (e) {
-					console.error(e) // FIXME logging
+				} catch (e: any) {
+					app.log.error(`error notifiying user: ${e.message}`)
 				}
 			})()
 
@@ -123,8 +123,8 @@ export default function ActionController(db: DB): FastifyPluginCallback {
 			;(async () => {
 				try {
 					await notifyNewSubdomainsWithHTTP(projectName)
-				} catch (e) {
-					console.error(e) // FIXME logging
+				} catch (e: any) {
+					app.log.error(`error notifiying user: ${e.message}`)
 				}
 			})()
 
@@ -146,13 +146,14 @@ export default function ActionController(db: DB): FastifyPluginCallback {
 				subfinderBin: 'bin/subfinder',
 			})
 
-			enumEvs.on('error', console.error) // FIXME logging
+			enumEvs.on('error', err =>
+				app.log.error(`error enumerating subdomains: ${err.message}`)
+			)
 
 			const subs: { subdomain: string; rootDomain: string }[] = []
 			enumEvs.on('sub', subdomain => {
 				const rootDomain = roots.find(root => subdomain.endsWith(root))
-				if (!rootDomain)
-					console.error('couldnt find root domain for sub: ', subdomain) // FIXME logging
+				if (!rootDomain) app.log.error(`couldnt find root domain for sub: ${subdomain}`)
 				else subs.push({ subdomain, rootDomain })
 			})
 
@@ -161,8 +162,8 @@ export default function ActionController(db: DB): FastifyPluginCallback {
 				const subsUpsertErrs = await db.upsertNewSubdomains(project, subs)
 				if (subsUpsertErrs && subsUpsertErrs.length > 0)
 					subsUpsertErrs.forEach(err =>
-						console.error("couldn't upsert subdomains: ", err)
-					) // FIXME logging
+						app.log.error(`write error upserting subdomains: ${err.errmsg}`)
+					)
 
 				const newSubs = await db.getSubdomains(project, startTime)
 				if (newSubs.length > 0) console.log('NEW SUBS FOUND')
@@ -185,7 +186,7 @@ export default function ActionController(db: DB): FastifyPluginCallback {
 			// FIXME load from config
 			const probeEvs = dnsProbe('bin/dnsx', subs)
 			probeEvs.on('sub', sub => (subsMap[sub] = true))
-			probeEvs.on('error', console.error) // FIXME logging
+			probeEvs.on('error', err => app.log.error(`error dns probing: ${err.message}`))
 
 			probeEvs.on('done', async () => {
 				await db.ensureSubdomainsDNSState(project, subsMap)
@@ -208,7 +209,7 @@ export default function ActionController(db: DB): FastifyPluginCallback {
 
 			const probeEvs = httpProbe('bin/httpx', subs)
 			probeEvs.on('sub', sub => (subsMap[sub] = true))
-			probeEvs.on('error', console.error) // FIXME logging
+			probeEvs.on('error', err => app.log.error(`error http probing: ${err.message}`))
 
 			probeEvs.on('done', async () => {
 				await db.ensureSubdomainsHTTPState(project, subsMap)
