@@ -11,6 +11,7 @@ export type ServerApp = ReturnType<typeof App>
 
 export interface ServerOptions {
 	db: DB
+	authToken: string
 	bin: {
 		amassBin: string
 		subfinderBin: string
@@ -21,7 +22,7 @@ export interface ServerOptions {
 	logger?: boolean
 }
 
-export function App({ db, bin, logger = true }: ServerOptions) {
+export function App({ db, bin, logger = true, authToken }: ServerOptions) {
 	const app = Fastify({ logger })
 
 	app.setErrorHandler((err, _, reply) => {
@@ -36,6 +37,13 @@ export function App({ db, bin, logger = true }: ServerOptions) {
 		const contentType = req.headers['content-type']?.split(';')[0].trim()
 		if (contentType !== 'application/json')
 			reply.code(status.BAD_REQUEST).send({ ok: false, error: 'bad request' })
+		done()
+	})
+
+	app.addHook('onRequest', (req, reply, done) => {
+		const token = req.headers['authentication-token'] // using a none-popular header for security
+		if (!token || token !== authToken)
+			reply.code(status.UNAUTHORIZED).send({ ok: false, error: 'unauthorized' })
 		done()
 	})
 

@@ -16,6 +16,30 @@ const bin = {
 	httpxBin: '',
 }
 
+const TOKEN = 'wubba-lubba-dub-dub'
+
+test.serial('api will response UNAUTHORIZED without token', async t => {
+	const { app } = await initializeTest()
+	const resp = await app.DEBUG_inject({
+		method: 'PUT',
+		url: '/api/projects/new',
+		payload: { project: 'test' },
+		headers: { 'content-type': 'application/json' },
+	})
+	t.is(resp.statusCode, status.UNAUTHORIZED)
+})
+
+test.serial('api will response UNAUTHORIZED with a bad token', async t => {
+	const { app } = await initializeTest()
+	const resp = await app.DEBUG_inject({
+		method: 'PUT',
+		url: '/api/projects/new',
+		payload: { project: 'test' },
+		headers: { 'content-type': 'application/json', 'authentication-token': 'bad' },
+	})
+	t.is(resp.statusCode, status.UNAUTHORIZED)
+})
+
 test.serial('put new project: should not fail', async t => {
 	const { inject } = await initializeTest()
 	const resp = await inject.putNewProject('memoryleaks')
@@ -202,7 +226,7 @@ test.serial('get root domains: should respond NOT_FOUND if project is empty', as
 
 async function initializeTest(logger = false) {
 	const db = NewDB(DB_URI, DB_NAME)
-	const app = App({ db, logger, bin })
+	const app = App({ db, logger, bin, authToken: TOKEN })
 	await db.DEBUG_cleanDB()
 	return { db, app, inject: Inject(app) }
 }
@@ -239,7 +263,7 @@ function isOK(t: ExecutionContext, resp: Response) {
 }
 
 function Inject(app: ServerApp) {
-	const headers = { 'content-type': 'application/json' }
+	const headers = { 'content-type': 'application/json', 'authentication-token': TOKEN }
 	const getProject = (project = '') =>
 		app.DEBUG_inject({
 			method: 'GET',

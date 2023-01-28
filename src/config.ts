@@ -29,10 +29,11 @@ const configSchema = {
 	properties: {
 		host: { type: 'string' },
 		port: { type: 'number' },
+		authToken: { type: 'string' },
 		db: dbSchema,
 		bin: binSchema,
 	},
-	required: ['host', 'port', 'db', 'bin'],
+	required: ['host', 'port', 'db', 'bin', 'authToken'],
 	additionalProperties: false,
 }
 
