@@ -34,6 +34,10 @@ export function App({ db, bin, logger = true, authToken }: ServerOptions) {
 	})
 
 	app.addHook('onRequest', (req, reply, done) => {
+		if (req.method === 'GET') {
+			done()
+			return
+		}
 		const contentType = req.headers['content-type']?.split(';')[0].trim()
 		if (contentType !== 'application/json')
 			reply.code(status.BAD_REQUEST).send({ ok: false, error: 'bad request' })

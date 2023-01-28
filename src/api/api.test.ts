@@ -18,7 +18,18 @@ const bin = {
 
 const TOKEN = 'wubba-lubba-dub-dub'
 
-test.serial('api will response UNAUTHORIZED without token', async t => {
+test.serial('api should response BAD_REQUEST without content-type header', async t => {
+	const { app } = await initializeTest()
+	const resp = await app.DEBUG_inject({
+		method: 'PUT',
+		url: '/api/projects/new',
+		payload: { project: 'test' },
+		headers: { 'authentication-token': TOKEN, 'content-type': '' },
+	})
+	isAPIError(t, resp, status.BAD_REQUEST)
+})
+
+test.serial('api should response UNAUTHORIZED without token', async t => {
 	const { app } = await initializeTest()
 	const resp = await app.DEBUG_inject({
 		method: 'PUT',
@@ -26,10 +37,10 @@ test.serial('api will response UNAUTHORIZED without token', async t => {
 		payload: { project: 'test' },
 		headers: { 'content-type': 'application/json' },
 	})
-	t.is(resp.statusCode, status.UNAUTHORIZED)
+	isAPIError(t, resp, status.UNAUTHORIZED)
 })
 
-test.serial('api will response UNAUTHORIZED with a bad token', async t => {
+test.serial('api should response UNAUTHORIZED with a bad token', async t => {
 	const { app } = await initializeTest()
 	const resp = await app.DEBUG_inject({
 		method: 'PUT',
@@ -37,7 +48,7 @@ test.serial('api will response UNAUTHORIZED with a bad token', async t => {
 		payload: { project: 'test' },
 		headers: { 'content-type': 'application/json', 'authentication-token': 'bad' },
 	})
-	t.is(resp.statusCode, status.UNAUTHORIZED)
+	isAPIError(t, resp, status.UNAUTHORIZED)
 })
 
 test.serial('put new project: should not fail', async t => {
