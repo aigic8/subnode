@@ -8,6 +8,14 @@ import { APIReply } from './utils'
 const DB_URI = 'mongodb://127.0.0.1:2727/'
 const DB_NAME = 'subnode_test'
 
+const bin = {
+	amassBin: '',
+	findomainBin: '',
+	subfinderBin: '',
+	dnsxBin: '',
+	httpxBin: '',
+}
+
 test.serial('put new project: should not fail', async t => {
 	const { inject } = await initializeTest()
 	const resp = await inject.putNewProject('memoryleaks')
@@ -194,7 +202,7 @@ test.serial('get root domains: should respond NOT_FOUND if project is empty', as
 
 async function initializeTest(logger = false) {
 	const db = NewDB(DB_URI, DB_NAME)
-	const app = App({ db, logger })
+	const app = App({ db, logger, bin })
 	await db.DEBUG_cleanDB()
 	return { db, app, inject: Inject(app) }
 }

@@ -9,12 +9,19 @@ import { INTERNAL_SERVER_MSG } from './utils'
 
 export type ServerApp = ReturnType<typeof App>
 
-interface ServerOptions {
+export interface ServerOptions {
 	db: DB
+	bin: {
+		amassBin: string
+		subfinderBin: string
+		findomainBin: string
+		httpxBin: string
+		dnsxBin: string
+	}
 	logger?: boolean
 }
 
-export function App({ db, logger = true }: ServerOptions) {
+export function App({ db, bin, logger = true }: ServerOptions) {
 	const app = Fastify({ logger })
 
 	app.setErrorHandler((err, _, reply) => {
@@ -35,7 +42,7 @@ export function App({ db, logger = true }: ServerOptions) {
 	app.register(ProjectController(db), { prefix: '/api/projects' })
 	app.register(SubdomainController(db), { prefix: '/api/subdomains' })
 	app.register(RootDomainController(db), { prefix: '/api/root_domains' })
-	app.register(ActionController(db), { prefix: '/api/actions' })
+	app.register(ActionController(db, bin), { prefix: '/api/actions' })
 
 	const listen = ({ port, host }: { port: number; host: string }) =>
 		app.listen({ port, host })

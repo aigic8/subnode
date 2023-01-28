@@ -57,7 +57,18 @@ interface HttpProbeShape {
 	Reply: APIReply<Record<string, never>>
 }
 
-export default function ActionController(db: DB): FastifyPluginCallback {
+interface ActionControllerConfig {
+	amassBin: string
+	subfinderBin: string
+	findomainBin: string
+	httpxBin: string
+	dnsxBin: string
+}
+
+export default function ActionController(
+	db: DB,
+	config: ActionControllerConfig
+): FastifyPluginCallback {
 	// FIXME check if we are not already doing the operation asked (better to be in DB, for multithreading)
 	// TODO find a safe way to test action controller
 	return (app, _, done) => {
@@ -139,11 +150,10 @@ export default function ActionController(db: DB): FastifyPluginCallback {
 			else roots = (await db.getRootDomains(project)).map(item => item.rootDomain)
 
 			const startTime = new Date()
-			// FIXME use config file
 			const enumEvs = enumSubs(roots, {
-				amassBin: 'bin/amass',
-				findomainBin: 'bin/findomain',
-				subfinderBin: 'bin/subfinder',
+				amassBin: config.amassBin,
+				findomainBin: config.findomainBin,
+				subfinderBin: config.subfinderBin,
 			})
 
 			enumEvs.on('error', err =>
@@ -183,8 +193,7 @@ export default function ActionController(db: DB): FastifyPluginCallback {
 			let subsMap: { [key: string]: boolean }
 			subs.forEach(sub => (subsMap[sub] = true))
 
-			// FIXME load from config
-			const probeEvs = dnsProbe('bin/dnsx', subs)
+			const probeEvs = dnsProbe(config.dnsxBin, subs)
 			probeEvs.on('sub', sub => (subsMap[sub] = true))
 			probeEvs.on('error', err => app.log.error(`error dns probing: ${err.message}`))
 
@@ -207,7 +216,7 @@ export default function ActionController(db: DB): FastifyPluginCallback {
 			const subsMap: { [key: string]: boolean } = {}
 			subs.forEach(sub => (subsMap[sub] = false))
 
-			const probeEvs = httpProbe('bin/httpx', subs)
+			const probeEvs = httpProbe(config.httpxBin, subs)
 			probeEvs.on('sub', sub => (subsMap[sub] = true))
 			probeEvs.on('error', err => app.log.error(`error http probing: ${err.message}`))
 
