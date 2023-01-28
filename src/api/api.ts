@@ -1,6 +1,7 @@
 import Fastify, { InjectOptions } from 'fastify'
 import status from 'http-status'
 import { DB } from '../db/db'
+import { NotifyInstance } from '../notify'
 import ActionController from './controllers/action'
 import ProjectController from './controllers/project'
 import RootDomainController from './controllers/rootDomain'
@@ -19,10 +20,11 @@ export interface ServerOptions {
 		httpxBin: string
 		dnsxBin: string
 	}
+	notify: NotifyInstance
 	logger?: boolean
 }
 
-export function App({ db, bin, logger = true, authToken }: ServerOptions) {
+export function App({ db, bin, notify, logger = true, authToken }: ServerOptions) {
 	const app = Fastify({ logger })
 
 	app.setErrorHandler((err, _, reply) => {
@@ -54,7 +56,7 @@ export function App({ db, bin, logger = true, authToken }: ServerOptions) {
 	app.register(ProjectController(db), { prefix: '/api/projects' })
 	app.register(SubdomainController(db), { prefix: '/api/subdomains' })
 	app.register(RootDomainController(db), { prefix: '/api/root_domains' })
-	app.register(ActionController(db, bin), { prefix: '/api/actions' })
+	app.register(ActionController(db, bin, notify), { prefix: '/api/actions' })
 
 	const listen = ({ port, host }: { port: number; host: string }) =>
 		app.listen({ port, host })

@@ -4,6 +4,7 @@ import { App, ServerApp } from './api'
 import status from 'http-status'
 import { Response } from 'light-my-request'
 import { APIReply } from './utils'
+import Notify from '../notify'
 
 const DB_URI = 'mongodb://127.0.0.1:2727/'
 const DB_NAME = 'subnode_test'
@@ -237,7 +238,8 @@ test.serial('get root domains: should respond NOT_FOUND if project is empty', as
 
 async function initializeTest(logger = false) {
 	const db = NewDB(DB_URI, DB_NAME)
-	const app = App({ db, logger, bin, authToken: TOKEN })
+	const notify = Notify({ token: '', channelID: '' })
+	const app = App({ db, logger, bin, authToken: TOKEN, notify })
 	await db.DEBUG_cleanDB()
 	return { db, app, inject: Inject(app) }
 }

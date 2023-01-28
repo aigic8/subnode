@@ -1,7 +1,8 @@
 import { FastifyPluginCallback, RouteShorthandOptions } from 'fastify'
-import { DB } from '../../db/db'
+import { DB, Subdomain } from '../../db/db'
 import { APIReply, dnsProbe, enumSubs, httpProbe, makeAPIErr } from '../utils'
 import status from 'http-status'
+import { NotifyInstance } from '../../notify'
 
 const checkNewSubsOptions: RouteShorthandOptions = {
 	schema: {
@@ -67,10 +68,12 @@ interface ActionControllerConfig {
 
 export default function ActionController(
 	db: DB,
-	config: ActionControllerConfig
+	config: ActionControllerConfig,
+	notify: NotifyInstance
 ): FastifyPluginCallback {
 	// FIXME check if we are not already doing the operation asked (better to be in DB, for multithreading)
 	// TODO find a safe way to test action controller
+	// TODO IMPORTANT create an event handler + queue for actions, then test them
 	return (app, _, done) => {
 		app.post<CheckNewSubsShape>(
 			'/check_new_subs',
@@ -167,7 +170,6 @@ export default function ActionController(
 				else subs.push({ subdomain, rootDomain })
 			})
 
-			// FIXME also want subdomains that became alive or found ip
 			enumEvs.on('done', async () => {
 				const subsUpsertErrs = await db.upsertNewSubdomains(project, subs)
 				if (subsUpsertErrs && subsUpsertErrs.length > 0)
@@ -176,8 +178,7 @@ export default function ActionController(
 					)
 
 				const newSubs = await db.getSubdomains(project, startTime)
-				if (newSubs.length > 0) console.log('NEW SUBS FOUND')
-				// FIXME notify the user about the new subs
+				if (newSubs.length > 0) notify.text(newSubsNotifyText(project, newSubs))
 			})
 		}
 
@@ -200,7 +201,8 @@ export default function ActionController(
 			probeEvs.on('done', async () => {
 				await db.ensureSubdomainsDNSState(project, subsMap)
 				const newSubsWithIp = await db.getSubdomainsWithIp(project, startTime)
-				if (newSubsWithIp.length > 0) console.log('FOUND NEW SUBS WITH IP!')
+				if (newSubsWithIp.length > 0)
+					notify.text(newHttpSubsNotifyText(project, newSubsWithIp))
 			})
 		}
 
@@ -221,12 +223,47 @@ export default function ActionController(
 			probeEvs.on('error', err => app.log.error(`error http probing: ${err.message}`))
 
 			probeEvs.on('done', async () => {
+				// TODO error handling for done event!
 				await db.ensureSubdomainsHTTPState(project, subsMap)
 				const newSubsWithHTTP = await db.getSubdomainsWithHTTP(project, startTime)
-				if (newSubsWithHTTP.length > 0) console.log('FOUND NEW SUBS WITH HTTP!')
+				if (newSubsWithHTTP.length > 0)
+					notify.text(newDnsSubsNotifyText(project, newSubsWithHTTP))
 			})
 		}
 
 		done()
 	}
+}
+
+function newSubsNotifyText(project: string, newSubs: Subdomain[]) {
+	let text = `Found **${newSubs.length}** passive subdomains for project **${project}**`
+	if (newSubs.length > 60)
+		text += newSubs
+			.slice(0, 60)
+			.map(sub => sub.subdomain)
+			.join('\n')
+	else text += newSubs.join('\n')
+	return text
+}
+
+function newDnsSubsNotifyText(project: string, newSubs: Subdomain[]) {
+	let text = `Found **${newSubs.length}** subdomains with ip for project **${project}**`
+	if (newSubs.length > 60)
+		text += newSubs
+			.slice(0, 60)
+			.map(sub => sub.subdomain)
+			.join('\n')
+	else text += newSubs.join('\n')
+	return text
+}
+
+function newHttpSubsNotifyText(project: string, newSubs: Subdomain[]) {
+	let text = `Found **${newSubs.length}** http subdomains for project **${project}**`
+	if (newSubs.length > 60)
+		text += newSubs
+			.slice(0, 60)
+			.map(sub => sub.subdomain)
+			.join('\n')
+	else text += newSubs.join('\n')
+	return text
 }
