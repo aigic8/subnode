@@ -36,7 +36,7 @@ export default function SubdomainController(db: DB): FastifyPluginCallback {
 			const { after } = req.query
 
 			try {
-				const dbProject = await db.getProject(project)
+				const dbProject = await db.project.get(project)
 				if (!dbProject)
 					return reply.code(status.NOT_FOUND).send(makeAPIErr('project not found'))
 			} catch (e: any) {
@@ -48,7 +48,7 @@ export default function SubdomainController(db: DB): FastifyPluginCallback {
 
 			const afterDate = after ? new Date(after) : undefined
 			try {
-				const subdomains = await db.getSubdomains(project, afterDate)
+				const subdomains = await db.subdomain.get(project, afterDate)
 				return reply.send({ ok: true, data: { subdomains } })
 			} catch (e: any) {
 				app.log.error(`error getting subdomain: ${e.message}`)

@@ -48,10 +48,10 @@ export default function RootDomainController(db: DB): FastifyPluginCallback {
 			async (req, reply) => {
 				const { project } = req.params
 				try {
-					const dbProject = await db.getProject(project)
+					const dbProject = await db.project.get(project)
 					if (!dbProject)
 						return reply.code(status.NOT_FOUND).send(makeAPIErr('project not found'))
-					const rootDomains = await db.getRootDomains(project)
+					const rootDomains = await db.rootDomain.get(project)
 					return reply.send({ ok: true, data: { rootDomains } })
 				} catch (e: any) {
 					app.log.error(`error getting root domain: ${e.message}`)
@@ -69,11 +69,11 @@ export default function RootDomainController(db: DB): FastifyPluginCallback {
 				const { project, rootDomains } = req.body
 
 				try {
-					const dbProject = await db.getProject(project)
+					const dbProject = await db.project.get(project)
 					if (!dbProject)
 						return reply.code(status.NOT_FOUND).send(makeAPIErr('project not found'))
 
-					await db.upsertNewRootDomains(project, rootDomains)
+					await db.rootDomain.upsert(project, rootDomains)
 					return reply.send({ ok: true, data: {} })
 				} catch (e: any) {
 					app.log.error(`error putting new root domain: ${e.message}`)

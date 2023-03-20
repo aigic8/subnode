@@ -83,7 +83,7 @@ export default function ActionController(
 				if (!projectName || projectName === '')
 					return reply.code(status.BAD_REQUEST).send(makeAPIErr('project is empty'))
 
-				const project = await db.getProject(projectName)
+				const project = await db.project.get(projectName)
 				if (!project)
 					return reply.code(status.NOT_FOUND).send(makeAPIErr('project does not exist'))
 
@@ -108,7 +108,7 @@ export default function ActionController(
 			if (!projectName || projectName === '')
 				return reply.code(status.BAD_REQUEST).send(makeAPIErr('project is empty'))
 
-			const project = await db.getProject(projectName)
+			const project = await db.project.get(projectName)
 			if (!project)
 				return reply.code(status.NOT_FOUND).send(makeAPIErr('project does not exist'))
 
@@ -129,7 +129,7 @@ export default function ActionController(
 			if (!projectName || projectName === '')
 				return reply.code(status.BAD_REQUEST).send(makeAPIErr('project is empty'))
 
-			const project = await db.getProject(projectName)
+			const project = await db.project.get(projectName)
 			if (!project)
 				return reply.code(status.NOT_FOUND).send(makeAPIErr('project does not exist'))
 
@@ -150,7 +150,7 @@ export default function ActionController(
 		async function notifyNewSubdomains(project: string, rootDomains?: string[]) {
 			let roots: string[]
 			if (rootDomains) roots = rootDomains
-			else roots = (await db.getRootDomains(project)).map(item => item.rootDomain)
+			else roots = (await db.rootDomain.get(project)).map(item => item.rootDomain)
 
 			const startTime = new Date()
 			const enumEvs = enumSubs(roots, {
@@ -171,13 +171,13 @@ export default function ActionController(
 			})
 
 			enumEvs.on('done', async () => {
-				const subsUpsertErrs = await db.upsertNewSubdomains(project, subs)
+				const subsUpsertErrs = await db.subdomain.upsert(project, subs)
 				if (subsUpsertErrs && subsUpsertErrs.length > 0)
 					subsUpsertErrs.forEach(err =>
 						app.log.error(`write error upserting subdomains: ${err.errmsg}`)
 					)
 
-				const newSubs = await db.getSubdomains(project, startTime)
+				const newSubs = await db.subdomain.get(project, startTime)
 				if (newSubs.length > 0) notify.text(newSubsNotifyText(project, newSubs))
 			})
 		}
@@ -189,7 +189,7 @@ export default function ActionController(
 			const startTime = new Date()
 			let subs: string[] = []
 			if (subdomains) subs = [...subdomains]
-			else subs = (await db.getSubdomains(project)).map(item => item.subdomain)
+			else subs = (await db.subdomain.get(project)).map(item => item.subdomain)
 
 			let subsMap: { [key: string]: boolean }
 			subs.forEach(sub => (subsMap[sub] = true))
@@ -199,8 +199,8 @@ export default function ActionController(
 			probeEvs.on('error', err => app.log.error(`error dns probing: ${err.message}`))
 
 			probeEvs.on('done', async () => {
-				await db.ensureSubdomainsDNSState(project, subsMap)
-				const newSubsWithIp = await db.getSubdomainsWithIp(project, startTime)
+				await db.subdomain.ensureDNSState(project, subsMap)
+				const newSubsWithIp = await db.subdomain.getWithIp(project, startTime)
 				if (newSubsWithIp.length > 0)
 					notify.text(newHttpSubsNotifyText(project, newSubsWithIp))
 			})
@@ -213,7 +213,7 @@ export default function ActionController(
 			const startTime = new Date()
 			let subs: string[] = []
 			if (subdomains) subs = [...subdomains]
-			else subs = (await db.getSubdomainsWithIp(project)).map(item => item.subdomain)
+			else subs = (await db.subdomain.getWithIp(project)).map(item => item.subdomain)
 
 			const subsMap: { [key: string]: boolean } = {}
 			subs.forEach(sub => (subsMap[sub] = false))
@@ -224,8 +224,8 @@ export default function ActionController(
 
 			probeEvs.on('done', async () => {
 				// TODO error handling for done event!
-				await db.ensureSubdomainsHTTPState(project, subsMap)
-				const newSubsWithHTTP = await db.getSubdomainsWithHTTP(project, startTime)
+				await db.subdomain.ensureHTTPState(project, subsMap)
+				const newSubsWithHTTP = await db.subdomain.getWithHTTP(project, startTime)
 				if (newSubsWithHTTP.length > 0)
 					notify.text(newDnsSubsNotifyText(project, newSubsWithHTTP))
 			})

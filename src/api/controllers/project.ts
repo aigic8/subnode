@@ -44,7 +44,7 @@ export default function ProjectController(db: DB): FastifyPluginCallback {
 		app.get<GetProjectShape>('/:project', getProjectOptions, async (req, reply) => {
 			const { project: name } = req.params
 			try {
-				const project = await db.getProject(name)
+				const project = await db.project.get(name)
 				if (!project)
 					return reply.code(status.NOT_FOUND).send(makeAPIErr('project not found'))
 
@@ -58,7 +58,7 @@ export default function ProjectController(db: DB): FastifyPluginCallback {
 		app.put<PutNewProjectShape>('/new', putNewProjectOptions, async (req, reply) => {
 			const { project } = req.body
 			try {
-				await db.createProject(project)
+				await db.project.add(project)
 				return reply.send({ ok: true, data: {} })
 			} catch (e: any) {
 				app.log.error(`error putting new project: ${e.message}`)

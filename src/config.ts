@@ -37,7 +37,6 @@ const configSchema = {
 	additionalProperties: false,
 }
 
-// TODO validate configration
 export interface Configuration {
 	host: string
 	port: number

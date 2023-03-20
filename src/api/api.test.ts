@@ -105,7 +105,7 @@ test.serial('get subdomains: should not fail', async t => {
 
 	await inject.putNewProject(projectName)
 	// FIXME use api instead of db
-	await db.upsertNewSubdomains(projectName, subdomains)
+	await db.subdomain.upsert(projectName, subdomains)
 	const resp = await inject.getSubdomains(projectName)
 
 	const data = isOK(t, resp) as { subdomains: Subdomain[] }
@@ -150,7 +150,7 @@ test.serial('get subodmains: after query should be used', async t => {
 
 	await inject.putNewProject(projectName)
 	// FIXME use api instead of db
-	await db.upsertNewSubdomains(projectName, subdomains)
+	await db.subdomain.upsert(projectName, subdomains)
 	const resp = await inject.getSubdomains(projectName, after)
 
 	const data = isOK(t, resp) as { subdomains: Subdomain[] }
