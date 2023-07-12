@@ -16,6 +16,7 @@
   },
   "scripts": {
     "dev": "ts-node src/main.ts",
+    "serve": "ts-node src/main.ts",
     "test": "ava"
   },
   "devDependencies": {
