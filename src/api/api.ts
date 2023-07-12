@@ -2,7 +2,7 @@ import Fastify, { InjectOptions } from 'fastify'
 import status from 'http-status'
 import { DB } from '../db/db'
 import { NotifyInstance } from '../notify'
-import ActionController from './controllers/action'
+import ActionController, { ActionControllerConfig } from './controllers/action'
 import ProjectController from './controllers/project'
 import RootDomainController from './controllers/rootDomain'
 import SubdomainController from './controllers/subdomain'
@@ -14,11 +14,11 @@ export interface ServerOptions {
 	db: DB
 	authToken: string
 	bin: {
-		amassBin: string
-		subfinderBin: string
-		findomainBin: string
-		httpxBin: string
-		dnsxBin: string
+		amass: string
+		subfinder: string
+		findomain: string
+		httpx: string
+		dnsx: string
 	}
 	notify: NotifyInstance
 	logger?: boolean
@@ -56,7 +56,9 @@ export function App({ db, bin, notify, logger = true, authToken }: ServerOptions
 	app.register(ProjectController(db), { prefix: '/api/projects' })
 	app.register(SubdomainController(db), { prefix: '/api/subdomains' })
 	app.register(RootDomainController(db), { prefix: '/api/root_domains' })
-	app.register(ActionController(db, bin, notify), { prefix: '/api/actions' })
+	app.register(ActionController(db, server2actionControllerBin(bin), notify), {
+		prefix: '/api/actions',
+	})
 
 	const listen = ({ port, host }: { port: number; host: string }) =>
 		app.listen({ port, host })
@@ -64,3 +66,13 @@ export function App({ db, bin, notify, logger = true, authToken }: ServerOptions
 
 	return { listen, DEBUG_inject }
 }
+
+const server2actionControllerBin = (
+	bin: ServerOptions['bin']
+): ActionControllerConfig => ({
+	amassBin: bin.amass,
+	findomainBin: bin.findomain,
+	subfinderBin: bin.subfinder,
+	httpxBin: bin.httpx,
+	dnsxBin: bin.dnsx,
+})

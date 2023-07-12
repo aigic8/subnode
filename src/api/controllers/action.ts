@@ -58,7 +58,7 @@ interface HttpProbeShape {
 	Reply: APIReply<Record<string, never>>
 }
 
-interface ActionControllerConfig {
+export interface ActionControllerConfig {
 	amassBin: string
 	subfinderBin: string
 	findomainBin: string

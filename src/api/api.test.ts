@@ -6,16 +6,16 @@ import { Response } from 'light-my-request'
 import { APIReply } from './utils'
 import Notify from '../notify'
 
-const DB_URI = 'mongodb://127.0.0.1:2727/'
+const DB_URI = 'mongodb://127.0.0.1:27017/'
 const DB_NAME = 'subnode_test'
 
 const bin = {
-	amassBin: '',
-	findomainBin: '',
-	subfinderBin: '',
-	dnsxBin: '',
-	httpxBin: '',
-}
+	amass: '',
+	findomain: '',
+	subfinder: '',
+	dnsx: '',
+	httpx: '',
+} as const
 
 const TOKEN = 'wubba-lubba-dub-dub'
 

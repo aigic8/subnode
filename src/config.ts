@@ -24,22 +24,36 @@ const binSchema = {
 	additionalProperties: false,
 }
 
+const notifySchema = {
+	type: 'object',
+	properties: {
+		token: { type: 'string' },
+		channelID: { type: 'string' },
+	},
+	required: ['token', 'channelID'],
+	additionalProperties: false,
+}
+
 const configSchema = {
 	type: 'object',
 	properties: {
 		host: { type: 'string' },
 		port: { type: 'number' },
 		authToken: { type: 'string' },
+		logger: { type: 'boolean' },
 		db: dbSchema,
 		bin: binSchema,
+		notify: notifySchema,
 	},
-	required: ['host', 'port', 'db', 'bin', 'authToken'],
+	required: ['host', 'port', 'db', 'bin', 'authToken', 'notify'],
 	additionalProperties: false,
 }
 
 export interface Configuration {
 	host: string
 	port: number
+	authToken: string
+	logger?: boolean
 	db: {
 		url: string
 		name: string
@@ -50,6 +64,10 @@ export interface Configuration {
 		subfinder: string
 		httpx: string
 		dnsx: string
+	}
+	notify: {
+		token: string
+		channelID: string
 	}
 }
 

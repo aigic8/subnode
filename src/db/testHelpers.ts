@@ -1,6 +1,6 @@
 import { NewDB } from './db'
 
-export const DB_URI = 'mongodb://127.0.0.1:2727/'
+export const DB_URI = 'mongodb://127.0.0.1:27017/'
 export const DB_NAME = 'subnode_test'
 
 export interface DBInitialData {
