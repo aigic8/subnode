@@ -1,0 +1,21 @@
+{
+  "host": "0.0.0.0",
+  "port": 8080,
+  "authToken": "12345678",
+  "logger": true,
+  "db": {
+    "url": "mongodb://127.0.0.1:27017",
+    "name": "subnode"
+  },
+  "bin": {
+    "amass": "bin/amass",
+    "findomain": "bin/findomain",
+    "subfinder": "bin/subfinder",
+    "httpx": "bin/httpx",
+    "dnsx": "bin/dnsx"
+  },
+  "notify": {
+    "token": "",
+    "channelID": ""
+  }
+}
