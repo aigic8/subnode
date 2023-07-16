@@ -12,4 +12,4 @@ RUN sh ./getBins.sh
 EXPOSE 8080
 
 RUN yarn
-CMD [ "yarn", "run", "serve" ]
+CMD yarn serve -c ${CONFIG_PATH}
