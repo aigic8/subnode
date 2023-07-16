@@ -148,7 +148,7 @@ export default function ActionController(
 		/**  Fetch new subdomains and notify user about them.
 		 * If optional parameter `rootDomains` is not provided it will be fetched from db */
 		function notifyNewSubdomains(project: string, rootDomains?: string[]) {
-			return new Promise<void>(async res => {
+			return new Promise<void>(async (res, rej) => {
 				let roots: string[]
 				if (rootDomains) roots = rootDomains
 				else roots = (await db.rootDomain.get(project)).map(item => item.rootDomain)
@@ -162,13 +162,14 @@ export default function ActionController(
 
 				enumEvs.on('error', err => {
 					app.log.error(`error enumerating subdomains: ${err.message}`)
-					res()
+					rej(err)
 				})
 
 				const subs: { subdomain: string; rootDomain: string }[] = []
 				enumEvs.on('sub', subdomain => {
 					const rootDomain = roots.find(root => subdomain.endsWith(root))
-					if (!rootDomain) app.log.error(`couldnt find root domain for sub: ${subdomain}`)
+					if (!rootDomain)
+						app.log.error(`couldn't find root domain for sub: ${subdomain}`)
 					else subs.push({ subdomain, rootDomain })
 				})
 
@@ -190,23 +191,34 @@ export default function ActionController(
 		 * If optional paramter `subdomains` is not provided, it will be fetched from db.
 		 */
 		async function notifyNewSubdomainsWithIP(project: string, subdomains?: string[]) {
-			const startTime = new Date()
-			let subs: string[] = []
-			if (subdomains) subs = [...subdomains]
-			else subs = (await db.subdomain.get(project)).map(item => item.subdomain)
+			return new Promise<void>(async (res, rej) => {
+				const startTime = new Date()
+				let subs: string[] = []
+				if (subdomains) subs = [...subdomains]
+				else subs = (await db.subdomain.get(project)).map(item => item.subdomain)
 
-			let subsMap: { [key: string]: boolean }
-			subs.forEach(sub => (subsMap[sub] = true))
+				if (subs.length === 0) {
+					res()
+					return
+				}
 
-			const probeEvs = dnsProbe(config.dnsxBin, subs)
-			probeEvs.on('sub', sub => (subsMap[sub] = true))
-			probeEvs.on('error', err => app.log.error(`error dns probing: ${err.message}`))
+				let subsMap: { [key: string]: boolean }
+				subs.forEach(sub => (subsMap[sub] = true))
 
-			probeEvs.on('done', async () => {
-				await db.subdomain.ensureDNSState(project, subsMap)
-				const newSubsWithIp = await db.subdomain.getWithIp(project, startTime)
-				if (newSubsWithIp.length > 0)
-					notify.text(newHttpSubsNotifyText(project, newSubsWithIp))
+				const probeEvs = dnsProbe(config.dnsxBin, subs)
+				probeEvs.on('sub', sub => (subsMap[sub] = true))
+				probeEvs.on('error', err => {
+					app.log.error(`error dns probing: ${err.message}`)
+					rej(err)
+				})
+
+				probeEvs.on('done', async () => {
+					await db.subdomain.ensureDNSState(project, subsMap)
+					const newSubsWithIp = await db.subdomain.getWithIp(project, startTime)
+					if (newSubsWithIp.length > 0)
+						notify.text(newDnsSubsNotifyText(project, newSubsWithIp))
+					res()
+				})
 			})
 		}
 
@@ -214,24 +226,34 @@ export default function ActionController(
 		 * If optional parameter `subdomains` is not provided, **subdomains with IP** will be fetched from db
 		 */
 		async function notifyNewSubdomainsWithHTTP(project: string, subdomains?: string[]) {
-			const startTime = new Date()
-			let subs: string[] = []
-			if (subdomains) subs = [...subdomains]
-			else subs = (await db.subdomain.getWithIp(project)).map(item => item.subdomain)
+			return new Promise<void>(async (res, rej) => {
+				const startTime = new Date()
+				let subs: string[] = []
+				if (subdomains) subs = [...subdomains]
+				else subs = (await db.subdomain.getWithIp(project)).map(item => item.subdomain)
 
-			const subsMap: { [key: string]: boolean } = {}
-			subs.forEach(sub => (subsMap[sub] = false))
+				if (subs.length === 0) {
+					res()
+					return
+				}
 
-			const probeEvs = httpProbe(config.httpxBin, subs)
-			probeEvs.on('sub', sub => (subsMap[sub] = true))
-			probeEvs.on('error', err => app.log.error(`error http probing: ${err.message}`))
+				const subsMap: { [key: string]: boolean } = {}
+				subs.forEach(sub => (subsMap[sub] = false))
 
-			probeEvs.on('done', async () => {
-				// TODO error handling for done event!
-				await db.subdomain.ensureHTTPState(project, subsMap)
-				const newSubsWithHTTP = await db.subdomain.getWithHTTP(project, startTime)
-				if (newSubsWithHTTP.length > 0)
-					notify.text(newDnsSubsNotifyText(project, newSubsWithHTTP))
+				const probeEvs = httpProbe(config.httpxBin, subs)
+				probeEvs.on('sub', sub => (subsMap[sub] = true))
+				probeEvs.on('error', err => {
+					app.log.error(`error http probing: ${err.message}`), rej()
+				})
+
+				probeEvs.on('done', async () => {
+					// TODO error handling for done event!
+					await db.subdomain.ensureHTTPState(project, subsMap)
+					const newSubsWithHTTP = await db.subdomain.getWithHTTP(project, startTime)
+					if (newSubsWithHTTP.length > 0)
+						notify.text(newHttpSubsNotifyText(project, newSubsWithHTTP))
+					res()
+				})
 			})
 		}
 
@@ -246,7 +268,7 @@ function newSubsNotifyText(project: string, newSubs: Subdomain[]) {
 			.slice(0, 60)
 			.map(sub => sub.subdomain)
 			.join('\n')
-	else text += newSubs.join('\n')
+	else text += newSubs.map(sub => sub.subdomain).join('\n')
 	return text
 }
 
@@ -257,7 +279,7 @@ function newDnsSubsNotifyText(project: string, newSubs: Subdomain[]) {
 			.slice(0, 60)
 			.map(sub => sub.subdomain)
 			.join('\n')
-	else text += newSubs.join('\n')
+	else text += newSubs.map(sub => sub.subdomain).join('\n')
 	return text
 }
 
@@ -268,6 +290,6 @@ function newHttpSubsNotifyText(project: string, newSubs: Subdomain[]) {
 			.slice(0, 60)
 			.map(sub => sub.subdomain)
 			.join('\n')
-	else text += newSubs.join('\n')
+	else text += newSubs.map(sub => sub.subdomain).join('\n')
 	return text
 }
