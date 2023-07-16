@@ -21,7 +21,7 @@ type GetProjectShape = {
 	Reply: APIReply<{ project: Project }>
 }
 
-const putNewProjectOptions: RouteShorthandOptions = {
+const postNewProjectOptions: RouteShorthandOptions = {
 	schema: {
 		body: {
 			type: 'object',
@@ -34,7 +34,7 @@ const putNewProjectOptions: RouteShorthandOptions = {
 	},
 }
 
-type PutNewProjectShape = {
+type PostNewProjectShape = {
 	Body: { project: string }
 	Reply: APIReply<Record<string, never>>
 }
@@ -55,13 +55,13 @@ export default function ProjectController(db: DB): FastifyPluginCallback {
 			}
 		})
 
-		app.put<PutNewProjectShape>('/new', putNewProjectOptions, async (req, reply) => {
+		app.post<PostNewProjectShape>('/new', postNewProjectOptions, async (req, reply) => {
 			const { project } = req.body
 			try {
 				await db.project.add(project)
 				return reply.send({ ok: true, data: {} })
 			} catch (e: any) {
-				app.log.error(`error putting new project: ${e.message}`)
+				app.log.error(`error posting new project: ${e.message}`)
 				return reply
 					.code(status.INTERNAL_SERVER_ERROR)
 					.send(makeAPIErr(INTERNAL_SERVER_MSG))

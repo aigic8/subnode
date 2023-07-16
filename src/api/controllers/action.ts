@@ -147,38 +147,42 @@ export default function ActionController(
 
 		/**  Fetch new subdomains and notify user about them.
 		 * If optional parameter `rootDomains` is not provided it will be fetched from db */
-		async function notifyNewSubdomains(project: string, rootDomains?: string[]) {
-			let roots: string[]
-			if (rootDomains) roots = rootDomains
-			else roots = (await db.rootDomain.get(project)).map(item => item.rootDomain)
+		function notifyNewSubdomains(project: string, rootDomains?: string[]) {
+			return new Promise<void>(async res => {
+				let roots: string[]
+				if (rootDomains) roots = rootDomains
+				else roots = (await db.rootDomain.get(project)).map(item => item.rootDomain)
 
-			const startTime = new Date()
-			const enumEvs = enumSubs(roots, {
-				amassBin: config.amassBin,
-				findomainBin: config.findomainBin,
-				subfinderBin: config.subfinderBin,
-			})
+				const startTime = new Date()
+				const enumEvs = enumSubs(roots, {
+					amassBin: config.amassBin,
+					findomainBin: config.findomainBin,
+					subfinderBin: config.subfinderBin,
+				})
 
-			enumEvs.on('error', err =>
-				app.log.error(`error enumerating subdomains: ${err.message}`)
-			)
+				enumEvs.on('error', err => {
+					app.log.error(`error enumerating subdomains: ${err.message}`)
+					res()
+				})
 
-			const subs: { subdomain: string; rootDomain: string }[] = []
-			enumEvs.on('sub', subdomain => {
-				const rootDomain = roots.find(root => subdomain.endsWith(root))
-				if (!rootDomain) app.log.error(`couldnt find root domain for sub: ${subdomain}`)
-				else subs.push({ subdomain, rootDomain })
-			})
+				const subs: { subdomain: string; rootDomain: string }[] = []
+				enumEvs.on('sub', subdomain => {
+					const rootDomain = roots.find(root => subdomain.endsWith(root))
+					if (!rootDomain) app.log.error(`couldnt find root domain for sub: ${subdomain}`)
+					else subs.push({ subdomain, rootDomain })
+				})
 
-			enumEvs.on('done', async () => {
-				const subsUpsertErrs = await db.subdomain.upsert(project, subs)
-				if (subsUpsertErrs && subsUpsertErrs.length > 0)
-					subsUpsertErrs.forEach(err =>
-						app.log.error(`write error upserting subdomains: ${err.errmsg}`)
-					)
+				enumEvs.on('done', async () => {
+					const subsUpsertErrs = await db.subdomain.upsert(project, subs)
+					if (subsUpsertErrs && subsUpsertErrs.length > 0)
+						subsUpsertErrs.forEach(err =>
+							app.log.error(`write error upserting subdomains: ${err.errmsg}`)
+						)
 
-				const newSubs = await db.subdomain.get(project, startTime)
-				if (newSubs.length > 0) notify.text(newSubsNotifyText(project, newSubs))
+					const newSubs = await db.subdomain.get(project, startTime)
+					if (newSubs.length > 0) notify.text(newSubsNotifyText(project, newSubs))
+					res()
+				})
 			})
 		}
 

@@ -22,7 +22,7 @@ const TOKEN = 'wubba-lubba-dub-dub'
 test.serial('api should response BAD_REQUEST without content-type header', async t => {
 	const { app } = await initializeTest()
 	const resp = await app.DEBUG_inject({
-		method: 'PUT',
+		method: 'POST',
 		url: '/api/projects/new',
 		payload: { project: 'test' },
 		headers: { 'authentication-token': TOKEN, 'content-type': '' },
@@ -33,7 +33,7 @@ test.serial('api should response BAD_REQUEST without content-type header', async
 test.serial('api should response UNAUTHORIZED without token', async t => {
 	const { app } = await initializeTest()
 	const resp = await app.DEBUG_inject({
-		method: 'PUT',
+		method: 'POST',
 		url: '/api/projects/new',
 		payload: { project: 'test' },
 		headers: { 'content-type': 'application/json' },
@@ -44,7 +44,7 @@ test.serial('api should response UNAUTHORIZED without token', async t => {
 test.serial('api should response UNAUTHORIZED with a bad token', async t => {
 	const { app } = await initializeTest()
 	const resp = await app.DEBUG_inject({
-		method: 'PUT',
+		method: 'POST',
 		url: '/api/projects/new',
 		payload: { project: 'test' },
 		headers: { 'content-type': 'application/json', 'authentication-token': 'bad' },
@@ -52,17 +52,17 @@ test.serial('api should response UNAUTHORIZED with a bad token', async t => {
 	isAPIError(t, resp, status.UNAUTHORIZED)
 })
 
-test.serial('put new project: should not fail', async t => {
+test.serial('post new project: should not fail', async t => {
 	const { inject } = await initializeTest()
-	const resp = await inject.putNewProject('memoryleaks')
+	const resp = await inject.postNewProject('memoryleaks')
 	isOK(t, resp)
 })
 
 test.serial(
-	'put new project: should respond BAD_REQUEST without project in body',
+	'post new project: should respond BAD_REQUEST without project in body',
 	async t => {
 		const { inject } = await initializeTest()
-		const resp = await inject.putNewProject()
+		const resp = await inject.postNewProject()
 		isAPIError(t, resp, status.BAD_REQUEST)
 	}
 )
@@ -71,7 +71,7 @@ test.serial('get project: should not fail', async t => {
 	const { inject } = await initializeTest()
 
 	const projectName = 'memoryleaks'
-	await inject.putNewProject(projectName)
+	await inject.postNewProject(projectName)
 	const resp = await inject.getProject(projectName)
 
 	const data = isOK(t, resp) as { project: Project }
@@ -103,7 +103,7 @@ test.serial('get subdomains: should not fail', async t => {
 		{ rootDomain: rootDomain, subdomain: 'cdn.memoryleaks.ir' },
 	]
 
-	await inject.putNewProject(projectName)
+	await inject.postNewProject(projectName)
 	// FIXME use api instead of db
 	await db.subdomain.upsert(projectName, subdomains)
 	const resp = await inject.getSubdomains(projectName)
@@ -148,7 +148,7 @@ test.serial('get subodmains: after query should be used', async t => {
 	const after = new Date()
 	after.setDate(after.getDate() + 1)
 
-	await inject.putNewProject(projectName)
+	await inject.postNewProject(projectName)
 	// FIXME use api instead of db
 	await db.subdomain.upsert(projectName, subdomains)
 	const resp = await inject.getSubdomains(projectName, after)
@@ -157,44 +157,44 @@ test.serial('get subodmains: after query should be used', async t => {
 	t.is(data.subdomains.length, 0)
 })
 
-test.serial('put new root domains: should not fail', async t => {
+test.serial('post new root domains: should not fail', async t => {
 	const { inject } = await initializeTest()
 	const projectName = 'memoryleaks'
 	const rootDomains = ['memoryleaks.ir', 'memoryleaks2.ir']
 
-	await inject.putNewProject(projectName)
-	const resp = await inject.putNewRootDomains(projectName, rootDomains)
+	await inject.postNewProject(projectName)
+	const resp = await inject.postNewRootDomains(projectName, rootDomains)
 	isOK(t, resp)
 })
 
 test.serial(
-	'put new root domains: should respond NOT_FOUND if project does not exist',
+	'post new root domains: should respond NOT_FOUND if project does not exist',
 	async t => {
 		const { inject } = await initializeTest()
 		const projectName = 'memoryleaks'
 		const rootDomains = ['memoryleaks.ir', 'memoryleaks2.ir']
 
-		const resp = await inject.putNewRootDomains(projectName, rootDomains)
+		const resp = await inject.postNewRootDomains(projectName, rootDomains)
 		isAPIError(t, resp, status.NOT_FOUND)
 	}
 )
 
 test.serial(
-	'put new root domains: should respond BAD_REQUEST if project is empty',
+	'post new root domains: should respond BAD_REQUEST if project is empty',
 	async t => {
 		const { inject } = await initializeTest()
 		const rootDomains = ['memoryleaks.ir', 'memoryleaks2.ir']
-		const resp = await inject.putNewRootDomains(undefined, rootDomains)
+		const resp = await inject.postNewRootDomains(undefined, rootDomains)
 		isAPIError(t, resp, status.BAD_REQUEST)
 	}
 )
 
 test.serial(
-	'put new root domains: should respond BAD_REQUEST if rootDomains is empty',
+	'post new root domains: should respond BAD_REQUEST if rootDomains is empty',
 	async t => {
 		const { inject } = await initializeTest()
 		const projectName = 'memoryleaks'
-		const resp = await inject.putNewRootDomains(projectName)
+		const resp = await inject.postNewRootDomains(projectName)
 		isAPIError(t, resp, status.BAD_REQUEST)
 	}
 )
@@ -204,8 +204,8 @@ test.serial('get root domains: should not fail', async t => {
 	const projectName = 'memoryleaks'
 	const rootDomains = ['memoryleaks.ir', 'memoryleaks2.ir']
 
-	await inject.putNewProject(projectName)
-	await inject.putNewRootDomains(projectName, rootDomains)
+	await inject.postNewProject(projectName)
+	await inject.postNewRootDomains(projectName, rootDomains)
 	const resp = await inject.getRootDomains(projectName)
 
 	const data = isOK(t, resp) as { rootDomains: RootDomain[] }
@@ -230,8 +230,8 @@ test.serial('get root domains: should respond NOT_FOUND if project is empty', as
 	const projectName = 'memoryleaks'
 	const rootDomains = ['memoryleaks.ir', 'memoryleaks2.ir']
 
-	await inject.putNewProject(projectName)
-	await inject.putNewRootDomains(projectName, rootDomains)
+	await inject.postNewProject(projectName)
+	await inject.postNewRootDomains(projectName, rootDomains)
 	const resp = await inject.getRootDomains()
 	isAPIError(t, resp, status.NOT_FOUND)
 })
@@ -284,9 +284,9 @@ function Inject(app: ServerApp) {
 			headers,
 		})
 
-	const putNewProject = (project?: string) =>
+	const postNewProject = (project?: string) =>
 		app.DEBUG_inject({
-			method: 'PUT',
+			method: 'POST',
 			url: '/api/projects/new',
 			payload: project ? { project } : {},
 			headers,
@@ -307,18 +307,18 @@ function Inject(app: ServerApp) {
 			headers,
 		})
 
-	const putNewRootDomains = (project?: string, rootDomains?: string[]) => {
+	const postNewRootDomains = (project?: string, rootDomains?: string[]) => {
 		const payload = {} as any
 		if (project) payload.project = project
 		if (rootDomains) payload.rootDomains = rootDomains
 
 		return app.DEBUG_inject({
-			method: 'PUT',
+			method: 'POST',
 			url: '/api/root_domains/new',
 			payload,
 			headers,
 		})
 	}
 
-	return { getProject, putNewProject, getSubdomains, getRootDomains, putNewRootDomains }
+	return { getProject, postNewProject, getSubdomains, getRootDomains, postNewRootDomains }
 }

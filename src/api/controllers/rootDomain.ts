@@ -21,7 +21,7 @@ type GetRootDomainsShape = {
 	Reply: APIReply<{ rootDomains: RootDomain[] }>
 }
 
-const putNewRootDomainsOptions: RouteShorthandOptions = {
+const postNewRootDomainsOptions: RouteShorthandOptions = {
 	schema: {
 		body: {
 			type: 'object',
@@ -35,7 +35,7 @@ const putNewRootDomainsOptions: RouteShorthandOptions = {
 	},
 }
 
-type PutNewRootDomainsShape = {
+type PostNewRootDomainsShape = {
 	Body: { project: string; rootDomains: string[] }
 	Reply: APIReply<Record<string, never>>
 }
@@ -62,9 +62,9 @@ export default function RootDomainController(db: DB): FastifyPluginCallback {
 			}
 		)
 
-		app.put<PutNewRootDomainsShape>(
+		app.post<PostNewRootDomainsShape>(
 			'/new',
-			putNewRootDomainsOptions,
+			postNewRootDomainsOptions,
 			async (req, reply) => {
 				const { project, rootDomains } = req.body
 
@@ -76,7 +76,7 @@ export default function RootDomainController(db: DB): FastifyPluginCallback {
 					await db.rootDomain.upsert(project, rootDomains)
 					return reply.send({ ok: true, data: {} })
 				} catch (e: any) {
-					app.log.error(`error putting new root domain: ${e.message}`)
+					app.log.error(`error posting new root domain: ${e.message}`)
 					return reply
 						.code(status.INTERNAL_SERVER_ERROR)
 						.send(makeAPIErr(INTERNAL_SERVER_MSG))
